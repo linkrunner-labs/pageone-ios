@@ -6,6 +6,7 @@ protocol BottomSheetDelegate: AnyObject {
     func bottomSheetDidSelectNote(_ note: NoteEntity)
     func bottomSheetDidRequestDismissal()
     func bottomSheetDidRequestNewNote()
+    func bottomSheetDidDeleteNote(_ note: NoteEntity)
 }
 
 // MARK: - Bottom Sheet View Controller
@@ -68,6 +69,7 @@ class BottomSheetViewController: UIViewController {
         
         button.configuration = config
         button.addTarget(self, action: #selector(newNoteButtonTapped), for: .touchUpInside)
+        button.isHidden = true  // Hide the New Note button
         return button
     }()
     
@@ -110,7 +112,6 @@ class BottomSheetViewController: UIViewController {
         view.addSubview(headerView)
         headerView.addSubview(titleLabel)
         headerView.addSubview(closeButton)
-        headerView.addSubview(newNoteButton)
         headerView.addSubview(separatorView)
         view.addSubview(tableView)
         
@@ -119,7 +120,6 @@ class BottomSheetViewController: UIViewController {
         headerView.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         closeButton.translatesAutoresizingMaskIntoConstraints = false
-        newNoteButton.translatesAutoresizingMaskIntoConstraints = false
         separatorView.translatesAutoresizingMaskIntoConstraints = false
     }
     
@@ -140,10 +140,6 @@ class BottomSheetViewController: UIViewController {
             closeButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
             closeButton.widthAnchor.constraint(equalToConstant: 32),
             closeButton.heightAnchor.constraint(equalToConstant: 32),
-            
-            // New Note Button
-            newNoteButton.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor, constant: -12),
-            newNoteButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
             
             // Separator
             separatorView.bottomAnchor.constraint(equalTo: headerView.bottomAnchor),
@@ -200,13 +196,11 @@ class BottomSheetViewController: UIViewController {
         // Animate header elements
         titleLabel.alpha = 0
         closeButton.alpha = 0
-        newNoteButton.alpha = 0
         tableView.alpha = 0
         
         UIView.animate(withDuration: 0.6, delay: 0.1, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: .curveEaseOut) { [weak self] in
             self?.titleLabel.alpha = 1
             self?.closeButton.alpha = 1
-            self?.newNoteButton.alpha = 1
             self?.tableView.alpha = 1
         }
     }
@@ -257,6 +251,12 @@ extension BottomSheetViewController: UITableViewDataSource {
             let note = notes[indexPath.row]
             let isSelected = note == selectedNote
             cell.configure(with: note, isSelected: isSelected)
+            
+            // Set up delete callback
+            cell.onDeleteTapped = { [weak self] in
+                self?.confirmDeleteNote(note)
+            }
+            
             return cell
         }
     }
@@ -308,6 +308,29 @@ extension BottomSheetViewController: UITableViewDelegate {
         }
     }
     
+    private func confirmDeleteNote(_ note: NoteEntity) {
+        // Add haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        let alert = UIAlertController(
+            title: "Delete Note",
+            message: "Are you sure you want to delete this note? This action cannot be undone.",
+            preferredStyle: .alert
+        )
+        
+        let deleteAction = UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            self?.deleteNote(note)
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
+        
+        alert.addAction(cancelAction)
+        alert.addAction(deleteAction)
+        
+        present(alert, animated: true)
+    }
+    
     private func deleteNote(_ note: NoteEntity) {
         guard let index = notes.firstIndex(of: note) else { return }
         
@@ -315,7 +338,7 @@ extension BottomSheetViewController: UITableViewDelegate {
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
         
-        // Remove from array
+        // Remove from local array
         notes.remove(at: index)
         
         // Update table view with animation
@@ -331,6 +354,9 @@ extension BottomSheetViewController: UITableViewDelegate {
         if selectedNote == note {
             selectedNote = notes.first
         }
+        
+        // Delegate the actual Core Data deletion to the parent
+        delegate?.bottomSheetDidDeleteNote(note)
     }
 }
 

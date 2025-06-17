@@ -22,7 +22,7 @@ struct ContentView: View {
     }
     
     private var floatingButtonBottomPadding: CGFloat {
-        isLandscape ? DesignSystem.Spacing.xl : DesignSystem.Spacing.xxxxl
+        isLandscape ? DesignSystem.Spacing.xl / 2 : DesignSystem.Spacing.xxxxl / 2
     }
     
     var body: some View {
@@ -93,6 +93,11 @@ struct ContentView: View {
             onNewNote: {
                 print("Bottom sheet new note requested")
                 createNewNote()
+                isToggling = false
+            },
+            onNoteDeleted: { note in
+                print("Bottom sheet note delete requested: \(note.title ?? "No title")")
+                deleteNote(note)
                 isToggling = false
             }
         )
@@ -176,6 +181,45 @@ struct ContentView: View {
         // Reset toggling state after a brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             isToggling = false
+        }
+    }
+    
+    private func deleteNote(_ note: NoteEntity) {
+        print("Deleting note: \(note.title ?? "No title")")
+        
+        // If the deleted note is currently selected, select another note or clear selection
+        if selectedNote == note {
+            // Find another note to select (prefer the next one, or the previous one, or nil)
+            if let currentIndex = notes.firstIndex(of: note) {
+                if currentIndex + 1 < notes.count {
+                    // Select the next note
+                    selectedNote = notes[currentIndex + 1]
+                } else if currentIndex > 0 {
+                    // Select the previous note
+                    selectedNote = notes[currentIndex - 1]
+                } else {
+                    // No other notes available
+                    selectedNote = nil
+                }
+            } else {
+                selectedNote = nil
+            }
+        }
+        
+        // Delete from Core Data
+        viewContext.delete(note)
+        
+        do {
+            try viewContext.save()
+            print("Note deleted successfully from Core Data")
+            
+            // If no notes left, create a new one
+            if notes.isEmpty && selectedNote == nil {
+                createNewNote()
+            }
+            
+        } catch {
+            print("Error deleting note: \(error)")
         }
     }
 }

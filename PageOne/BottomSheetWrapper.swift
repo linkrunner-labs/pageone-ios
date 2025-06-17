@@ -8,6 +8,7 @@ struct BottomSheetWrapper: UIViewControllerRepresentable {
     let onNoteSelected: (NoteEntity) -> Void
     let onDismiss: () -> Void
     let onNewNote: () -> Void
+    let onNoteDeleted: (NoteEntity) -> Void
     let presentationID: UUID // Unique ID for each presentation request
     
     func makeUIViewController(context: Context) -> EmptyViewController {
@@ -101,6 +102,11 @@ struct BottomSheetWrapper: UIViewControllerRepresentable {
             parent.onNewNote()
         }
         
+        func bottomSheetDidDeleteNote(_ note: NoteEntity) {
+            print("Note delete requested: \(note.title ?? "No title")")
+            parent.onNoteDeleted(note)
+        }
+        
         private func cleanup() {
             print("Cleaning up coordinator state")
             currentBottomSheet = nil
@@ -134,6 +140,7 @@ struct BottomSheetModifier: ViewModifier {
     let selectedNote: NoteEntity?
     let onNoteSelected: (NoteEntity) -> Void
     let onNewNote: () -> Void
+    let onNoteDeleted: (NoteEntity) -> Void
     
     @State private var presentationID = UUID()
     
@@ -163,6 +170,10 @@ struct BottomSheetModifier: ViewModifier {
                                     onNewNote()
                                 }
                             },
+                            onNoteDeleted: { note in
+                                print("BottomSheetModifier: Note deleted")
+                                onNoteDeleted(note)
+                            },
                             presentationID: presentationID
                         )
                         .allowsHitTesting(false)
@@ -186,7 +197,8 @@ extension View {
         notes: [NoteEntity],
         selectedNote: NoteEntity?,
         onNoteSelected: @escaping (NoteEntity) -> Void,
-        onNewNote: @escaping () -> Void
+        onNewNote: @escaping () -> Void,
+        onNoteDeleted: @escaping (NoteEntity) -> Void
     ) -> some View {
         self.modifier(
             BottomSheetModifier(
@@ -194,7 +206,8 @@ extension View {
                 notes: notes,
                 selectedNote: selectedNote,
                 onNoteSelected: onNoteSelected,
-                onNewNote: onNewNote
+                onNewNote: onNewNote,
+                onNoteDeleted: onNoteDeleted
             )
         )
     }

@@ -60,7 +60,22 @@ class NoteTableViewCell: UITableViewCell {
         return view
     }()
     
+    private lazy var deleteButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        let image = UIImage(systemName: "trash", withConfiguration: config)
+        button.setImage(image, for: .normal)
+        button.tintColor = DesignSystem.Colors.uiWarmGray.withAlphaComponent(0.6)
+        button.backgroundColor = UIColor.clear
+        button.layer.cornerRadius = 16
+        button.frame = CGRect(x: 0, y: 0, width: 32, height: 32)
+        return button
+    }()
+    
     private var isNoteSelected = false
+    
+    // Callback for delete action
+    var onDeleteTapped: (() -> Void)?
     
     // MARK: - Initialization
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -102,23 +117,48 @@ class NoteTableViewCell: UITableViewCell {
     
     // MARK: - Public Methods
     func configure(with note: NoteEntity, isSelected: Bool) {
-        titleLabel.text = note.title ?? "Untitled"
+        // Configure title with new date format
+        if let createdAt = note.createdAt {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "d"
+            let day = formatter.string(from: createdAt)
+            
+            formatter.dateFormat = "MMMM yyyy h:mma"
+            let dateString = formatter.string(from: createdAt)
+            
+            // Add ordinal suffix to day
+            let dayInt = Int(day) ?? 0
+            let ordinalSuffix: String
+            switch dayInt % 10 {
+            case 1 where dayInt % 100 != 11:
+                ordinalSuffix = "st"
+            case 2 where dayInt % 100 != 12:
+                ordinalSuffix = "nd"
+            case 3 where dayInt % 100 != 13:
+                ordinalSuffix = "rd"
+            default:
+                ordinalSuffix = "th"
+            }
+            
+            titleLabel.text = "\(day)\(ordinalSuffix) \(dateString)"
+        } else {
+            titleLabel.text = "Unknown date"
+        }
         
-        // Configure preview text
+        // Configure preview text - first line only, truncated to 1 line
         if let body = note.body, !body.isEmpty {
-            previewLabel.text = String(body.prefix(100))
+            let firstLine = body.components(separatedBy: .newlines).first ?? ""
+            previewLabel.text = firstLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            previewLabel.numberOfLines = 1
             previewLabel.isHidden = false
         } else {
             previewLabel.text = "No additional text"
+            previewLabel.numberOfLines = 1
             previewLabel.isHidden = false
         }
         
-        // Configure date
-        if let createdAt = note.createdAt {
-            dateLabel.text = formatRelativeDate(createdAt)
-        } else {
-            dateLabel.text = "Unknown date"
-        }
+        // Remove date label since date is now in title
+        dateLabel.text = ""
         
         // Update selection state
         isNoteSelected = isSelected
@@ -136,6 +176,7 @@ class NoteTableViewCell: UITableViewCell {
         containerView.addSubview(titleLabel)
         containerView.addSubview(previewLabel)
         containerView.addSubview(dateLabel)
+        containerView.addSubview(deleteButton)
         containerView.addSubview(separatorView)
         
         // Configure Auto Layout
@@ -145,7 +186,15 @@ class NoteTableViewCell: UITableViewCell {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         previewLabel.translatesAutoresizingMaskIntoConstraints = false
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
+        deleteButton.translatesAutoresizingMaskIntoConstraints = false
         separatorView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add delete button action
+        deleteButton.addTarget(self, action: #selector(deleteButtonTapped), for: .touchUpInside)
+    }
+    
+    @objc private func deleteButtonTapped() {
+        onDeleteTapped?()
     }
     
     private func setupConstraints() {
@@ -166,20 +215,26 @@ class NoteTableViewCell: UITableViewCell {
             noteIconImageView.centerXAnchor.constraint(equalTo: iconContainerView.centerXAnchor),
             noteIconImageView.centerYAnchor.constraint(equalTo: iconContainerView.centerYAnchor),
             
+            // Delete Button
+            deleteButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            deleteButton.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+            deleteButton.widthAnchor.constraint(equalToConstant: 32),
+            deleteButton.heightAnchor.constraint(equalToConstant: 32),
+            
             // Title Label
             titleLabel.leadingAnchor.constraint(equalTo: iconContainerView.trailingAnchor, constant: 12),
             titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: dateLabel.leadingAnchor, constant: -8),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: deleteButton.leadingAnchor, constant: -12),
             
-            // Date Label
-            dateLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            // Date Label (hidden now since date is in title)
+            dateLabel.trailingAnchor.constraint(equalTo: deleteButton.leadingAnchor, constant: -8),
             dateLabel.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            dateLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
+            dateLabel.widthAnchor.constraint(equalToConstant: 0), // Hide date label
             
             // Preview Label
             previewLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             previewLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            previewLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            previewLabel.trailingAnchor.constraint(equalTo: deleteButton.leadingAnchor, constant: -12),
             previewLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -16),
             
             // Separator View
@@ -199,6 +254,8 @@ class NoteTableViewCell: UITableViewCell {
         let iconTintColor: UIColor = isNoteSelected ? UIColor.white : DesignSystem.Colors.uiWarmGray
         let separatorAlpha: CGFloat = isNoteSelected ? 0.0 : 1.0
         
+        let deleteButtonTintColor: UIColor = isNoteSelected ? UIColor.white.withAlphaComponent(0.8) : DesignSystem.Colors.uiWarmGray.withAlphaComponent(0.6)
+        
         let updateColors = {
             self.containerView.backgroundColor = backgroundColor
             self.titleLabel.textColor = titleColor
@@ -206,6 +263,7 @@ class NoteTableViewCell: UITableViewCell {
             self.dateLabel.textColor = dateColor
             self.iconContainerView.backgroundColor = iconBackgroundColor
             self.noteIconImageView.tintColor = iconTintColor
+            self.deleteButton.tintColor = deleteButtonTintColor
             self.separatorView.alpha = separatorAlpha
         }
         
