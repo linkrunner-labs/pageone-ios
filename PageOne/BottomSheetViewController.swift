@@ -90,7 +90,10 @@ class BottomSheetViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        animateAppearance()
+        // Elements appear immediately without fade-in animation
+        titleLabel.alpha = 1
+        closeButton.alpha = 1
+        tableView.alpha = 1
     }
     
     // MARK: - Public Methods
@@ -186,23 +189,8 @@ class BottomSheetViewController: UIViewController {
     }
     
     private func addHapticFeedback() {
-        // Add haptic feedback for sheet presentation
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.prepare()
-        impactFeedback.impactOccurred()
-    }
-    
-    private func animateAppearance() {
-        // Animate header elements
-        titleLabel.alpha = 0
-        closeButton.alpha = 0
-        tableView.alpha = 0
-        
-        UIView.animate(withDuration: 0.6, delay: 0.1, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: .curveEaseOut) { [weak self] in
-            self?.titleLabel.alpha = 1
-            self?.closeButton.alpha = 1
-            self?.tableView.alpha = 1
-        }
+        // Haptic feedback is now handled in ContentView for better timing
+        // This method kept for potential future use
     }
     
     private func scrollToSelectedNote() {
@@ -211,7 +199,9 @@ class BottomSheetViewController: UIViewController {
               !notes.isEmpty else { return }
         
         let indexPath = IndexPath(row: index, section: 0)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+        
+        // Use slight delay to ensure table view is fully loaded
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             self?.tableView.scrollToRow(at: indexPath, at: .middle, animated: true)
         }
     }
@@ -279,11 +269,9 @@ extension BottomSheetViewController: UITableViewDelegate {
         selectedNote = note
         tableView.reloadData()
         
-        // Notify delegate after brief delay for better UX
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            self?.delegate?.bottomSheetDidSelectNote(note)
-            self?.dismiss(animated: true)
-        }
+        // Notify delegate and dismiss immediately for smooth UX
+        delegate?.bottomSheetDidSelectNote(note)
+        dismiss(animated: true)
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {

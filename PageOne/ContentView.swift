@@ -13,8 +13,6 @@ struct ContentView: View {
     private var notes: FetchedResults<NoteEntity>
     
     @State private var selectedNote: NoteEntity?
-    @State private var showNotesSheet: Bool = false
-    @State private var isToggling: Bool = false // Add state to prevent rapid toggles
     
     // Computed properties for responsive design
     private var isLandscape: Bool {
@@ -45,9 +43,6 @@ struct ContentView: View {
                 }
             }
             
-            // UIKit Bottom Sheet Integration
-            EmptyView()
-            
             // Floating Action Buttons
             VStack {
                 Spacer()
@@ -55,7 +50,7 @@ struct ContentView: View {
                     DSFloatingActionButton(
                         icon: "list.bullet",
                         accessibilityLabel: "Show notes list",
-                        action: toggleNotesSheet
+                        action: presentNotesSheet
                     )
                     
                     Spacer()
@@ -77,34 +72,6 @@ struct ContentView: View {
                 print("Auto-selected first note: \(firstNote.title ?? "No title")")
             } else {
                 createNewNote()
-            }
-        }
-        .bottomSheet(
-            isPresented: $showNotesSheet,
-            notes: Array(notes),
-            selectedNote: selectedNote,
-            onNoteSelected: { note in
-                print("Bottom sheet note selected: \(note.title ?? "No title")")
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    selectedNote = note
-                }
-                isToggling = false
-            },
-            onNewNote: {
-                print("Bottom sheet new note requested")
-                createNewNote()
-                isToggling = false
-            },
-            onNoteDeleted: { note in
-                print("Bottom sheet note delete requested: \(note.title ?? "No title")")
-                deleteNote(note)
-                isToggling = false
-            }
-        )
-        .onChange(of: showNotesSheet) { newValue in
-            print("showNotesSheet changed to: \(newValue)")
-            if !newValue {
-                isToggling = false
             }
         }
     }
@@ -133,54 +100,64 @@ struct ContentView: View {
                 print("Selected note set to: \(selectedNote?.title ?? "None")")
             }
             
-            // Hide bottom sheet after creating note (if currently shown)
-            if showNotesSheet {
-                showNotesSheet = false
-                print("Notes sheet hidden after creating new note")
-                isToggling = false
-            }
-            
         } catch {
             print("Error creating note: \(error)")
         }
     }
     
-    private func toggleNotesSheet() {
-        print("Toggle notes sheet button tapped!")
-        print("Current showNotesSheet: \(showNotesSheet), isToggling: \(isToggling)")
-        
-        // Prevent rapid toggles
-        guard !isToggling else {
-            print("Toggle ignored - already in progress")
-            return
-        }
-        
-        // Only allow opening if not already shown
-        guard !showNotesSheet else {
-            print("Notes sheet already shown")
-            return
-        }
-        
-        // Set toggling state
-        isToggling = true
+    private func presentNotesSheet() {
+        print("Notes sheet button tapped!")
         
         // Dismiss keyboard when opening menu
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         
-        // Add haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        // Add haptic feedback for opening
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.prepare()
         impactFeedback.impactOccurred()
         
-        // Show the sheet with animation
-        withAnimation(.easeInOut(duration: 0.2)) {
-            showNotesSheet = true
+        // Find the root view controller
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootViewController = window.rootViewController else {
+            print("Could not find root view controller")
+            return
         }
         
-        print("Notes sheet opened")
+        // Find the topmost view controller
+        var topViewController = rootViewController
+        while let presentedViewController = topViewController.presentedViewController {
+            topViewController = presentedViewController
+        }
         
-        // Reset toggling state after a brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            isToggling = false
+        // Check if there's already a bottom sheet presented
+        if topViewController is BottomSheetViewController {
+            print("Bottom sheet already presented")
+            return
+        }
+        
+        print("Presenting bottom sheet with \(notes.count) notes")
+        
+        // Create and configure bottom sheet
+        let bottomSheet = BottomSheetViewController()
+        let delegate = ContentViewBottomSheetDelegate(
+            selectedNote: Binding(
+                get: { selectedNote },
+                set: { newValue in
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        selectedNote = newValue
+                    }
+                }
+            ),
+            viewContext: viewContext,
+            notes: notes
+        )
+        bottomSheet.delegate = delegate
+        bottomSheet.configure(with: Array(notes), selectedNote: selectedNote)
+        
+        // Present with smooth animation
+        topViewController.present(bottomSheet, animated: true) {
+            print("Bottom sheet presentation completed")
         }
     }
     
@@ -224,9 +201,104 @@ struct ContentView: View {
     }
 }
 
-// Old SwiftUI bottom sheet components removed - now using UIKit implementation
-
-// All old SwiftUI bottom sheet components removed - replaced with UIKit implementation
+// MARK: - Bottom Sheet Delegate Wrapper
+private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
+    private let selectedNote: Binding<NoteEntity?>
+    private let viewContext: NSManagedObjectContext
+    private let notes: FetchedResults<NoteEntity>
+    
+    init(
+        selectedNote: Binding<NoteEntity?>,
+        viewContext: NSManagedObjectContext,
+        notes: FetchedResults<NoteEntity>
+    ) {
+        self.selectedNote = selectedNote
+        self.viewContext = viewContext
+        self.notes = notes
+    }
+    
+    func bottomSheetDidSelectNote(_ note: NoteEntity) {
+        print("Bottom sheet note selected: \(note.title ?? "No title")")
+        selectedNote.wrappedValue = note
+    }
+    
+    func bottomSheetDidRequestDismissal() {
+        print("Bottom sheet dismissed")
+        // Nothing needed - UIKit handles dismissal automatically
+    }
+    
+    func bottomSheetDidRequestNewNote() {
+        print("Bottom sheet new note requested")
+        createNewNote()
+    }
+    
+    func bottomSheetDidDeleteNote(_ note: NoteEntity) {
+        print("Bottom sheet note delete requested: \(note.title ?? "No title")")
+        deleteNote(note)
+    }
+    
+    private func createNewNote() {
+        let newNote = NoteEntity(context: viewContext)
+        newNote.id = UUID()
+        newNote.createdAt = Date()
+        newNote.updatedAt = Date()
+        newNote.body = ""
+        
+        // Generate title using specified format
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH-mm"
+        newNote.title = "Note \(formatter.string(from: Date()))"
+        
+        do {
+            try viewContext.save()
+            print("New note saved successfully: \(newNote.title ?? "No title")")
+            
+            // Set the new note as selected
+            selectedNote.wrappedValue = newNote
+            print("Selected note set to: \(newNote.title ?? "None")")
+            
+        } catch {
+            print("Error creating note: \(error)")
+        }
+    }
+    
+    private func deleteNote(_ note: NoteEntity) {
+        // If the deleted note is currently selected, select another note or clear selection
+        if selectedNote.wrappedValue == note {
+            // Find another note to select (prefer the next one, or the previous one, or nil)
+            if let currentIndex = notes.firstIndex(of: note) {
+                if currentIndex + 1 < notes.count {
+                    // Select the next note
+                    selectedNote.wrappedValue = notes[currentIndex + 1]
+                } else if currentIndex > 0 {
+                    // Select the previous note
+                    selectedNote.wrappedValue = notes[currentIndex - 1]
+                } else {
+                    // No other notes available
+                    selectedNote.wrappedValue = nil
+                }
+            } else {
+                selectedNote.wrappedValue = nil
+            }
+        }
+        
+        // Delete from Core Data
+        viewContext.delete(note)
+        
+        do {
+            try viewContext.save()
+            print("Note deleted successfully from Core Data")
+            
+            // If no notes left, create a new one
+            if notes.isEmpty && selectedNote.wrappedValue == nil {
+                createNewNote()
+            }
+            
+        } catch {
+            print("Error deleting note: \(error)")
+        }
+    }
+}
 
 struct NoteEditView: View {
     @ObservedObject var note: NoteEntity
@@ -244,6 +316,18 @@ struct NoteEditView: View {
             .padding(.top, DesignSystem.Spacing.lg)
             .background(DesignSystem.Colors.primaryBackground)
             .scrollContentBackground(.hidden) // Hide the default white background
+            .mask(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.05),
+                        .init(color: .black, location: 0.95),
+                        .init(color: .clear, location: 1)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             .onChange(of: textContent) { newValue in
                 debouncedSave(newValue)
             }
@@ -289,10 +373,6 @@ struct NoteEditView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
     }
 }
-
-// Old FloatingActionButton removed - now using DSFloatingActionButton from DesignSystem
-
-// Note: onPressGesture extension is now defined in DesignSystem.swift
 
 struct EmptyStateView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
