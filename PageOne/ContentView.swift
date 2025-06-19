@@ -309,9 +309,25 @@ private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
 struct NoteEditView: View {
     @ObservedObject var note: NoteEntity
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var textContent: String = ""
     @State private var saveWorkItem: DispatchWorkItem?
     @FocusState private var isTextFieldFocused: Bool
+    
+    // Computed properties for responsive design
+    private var isLandscape: Bool {
+        verticalSizeClass == .compact
+    }
+    
+    private var bottomContentMargin: CGFloat {
+        // Calculate the total height needed for floating buttons:
+        // Button height (52) + bottom padding + some extra buffer
+        let buttonHeight: CGFloat = 52
+        let buttonBottomPadding = isLandscape ? DesignSystem.Spacing.xl / 2 : DesignSystem.Spacing.xxxxl / 2
+        let extraBuffer: CGFloat = DesignSystem.Spacing.md // Extra space for comfort
+        
+        return buttonHeight + buttonBottomPadding + extraBuffer
+    }
     
     var body: some View {
         TextEditor(text: $textContent)
@@ -320,6 +336,7 @@ struct NoteEditView: View {
             .focused($isTextFieldFocused)
             .padding(.horizontal, DesignSystem.Spacing.lg)
             .padding(.top, DesignSystem.Spacing.lg)
+            .contentMargins(.bottom, bottomContentMargin)
             .background(DesignSystem.Colors.primaryBackground)
             .scrollContentBackground(.hidden) // Hide the default white background
             .mask(
