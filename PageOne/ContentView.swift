@@ -13,6 +13,7 @@ struct ContentView: View {
     private var notes: FetchedResults<NoteEntity>
     
     @State private var selectedNote: NoteEntity?
+    @State private var bottomSheetDelegate: ContentViewBottomSheetDelegate?
     
     // Computed properties for responsive design
     private var isLandscape: Bool {
@@ -33,6 +34,7 @@ struct ContentView: View {
             Group {
                 if let note = selectedNote {
                     NoteEditView(note: note)
+                        .id(note.id)
                 } else {
                     EmptyStateView()
                         .onAppear {
@@ -144,6 +146,7 @@ struct ContentView: View {
             selectedNote: Binding(
                 get: { selectedNote },
                 set: { newValue in
+                    print("Setting selectedNote to: \(newValue?.title ?? "nil")")
                     withAnimation(.easeInOut(duration: 0.3)) {
                         selectedNote = newValue
                     }
@@ -152,6 +155,7 @@ struct ContentView: View {
             viewContext: viewContext,
             notes: notes
         )
+        bottomSheetDelegate = delegate  // Store reference to prevent deallocation
         bottomSheet.delegate = delegate
         bottomSheet.configure(with: Array(notes), selectedNote: selectedNote)
         
@@ -218,8 +222,10 @@ private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
     }
     
     func bottomSheetDidSelectNote(_ note: NoteEntity) {
-        print("Bottom sheet note selected: \(note.title ?? "No title")")
+        print("Bottom sheet note selected: \(note.title ?? "No title") with ID: \(note.id?.uuidString ?? "no ID")")
+        print("Current selectedNote: \(selectedNote.wrappedValue?.title ?? "nil") with ID: \(selectedNote.wrappedValue?.id?.uuidString ?? "no ID")")
         selectedNote.wrappedValue = note
+        print("After setting, selectedNote: \(selectedNote.wrappedValue?.title ?? "nil") with ID: \(selectedNote.wrappedValue?.id?.uuidString ?? "no ID")")
     }
     
     func bottomSheetDidRequestDismissal() {
@@ -331,19 +337,10 @@ struct NoteEditView: View {
             .onChange(of: textContent) { newValue in
                 debouncedSave(newValue)
             }
-            .onChange(of: note) { newNote in
-                // Update content when note changes
-                textContent = newNote.body ?? ""
-                print("Note changed to: \(newNote.title ?? "No title")")
-                
-                // Auto-focus keyboard when switching to a new note
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isTextFieldFocused = true
-                }
-            }
             .onAppear {
                 textContent = note.body ?? ""
-                print("NoteEditView appeared with note: \(note.title ?? "No title")")
+                print("NoteEditView appeared with note: \(note.title ?? "No title") with ID: \(note.id?.uuidString ?? "no ID")")
+                print("Setting textContent to: \(textContent)")
                 // Auto-focus keyboard on launch
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     isTextFieldFocused = true
