@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		EC3179E42E059A6C00DDB6DA /* FacebookAEM in Frameworks */ = {isa = PBXBuildFile; productRef = EC3179E32E059A6C00DDB6DA /* FacebookAEM */; };
+		EC3179E62E059A6C00DDB6DA /* FacebookBasics in Frameworks */ = {isa = PBXBuildFile; productRef = EC3179E52E059A6C00DDB6DA /* FacebookBasics */; };
+		EC3179E82E059A6C00DDB6DA /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = EC3179E72E059A6C00DDB6DA /* FacebookCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		EC12FC702E01174000A19FF0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +35,22 @@
 		EC12FC792E01174000A19FF0 /* PageOneUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PageOneUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EC3179DA2E043A7600DDB6DA /* Exceptions for "PageOne" folder in "PageOne" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EC12FC5C2E01173F00A19FF0 /* PageOne */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EC12FC5F2E01173F00A19FF0 /* PageOne */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EC3179DA2E043A7600DDB6DA /* Exceptions for "PageOne" folder in "PageOne" target */,
+			);
 			path = PageOne;
 			sourceTree = "<group>";
 		};
@@ -52,6 +71,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EC3179E42E059A6C00DDB6DA /* FacebookAEM in Frameworks */,
+				EC3179E82E059A6C00DDB6DA /* FacebookCore in Frameworks */,
+				EC3179E62E059A6C00DDB6DA /* FacebookBasics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +134,9 @@
 			);
 			name = PageOne;
 			packageProductDependencies = (
+				EC3179E32E059A6C00DDB6DA /* FacebookAEM */,
+				EC3179E52E059A6C00DDB6DA /* FacebookBasics */,
+				EC3179E72E059A6C00DDB6DA /* FacebookCore */,
 			);
 			productName = PageOne;
 			productReference = EC12FC5D2E01173F00A19FF0 /* PageOne.app */;
@@ -195,6 +220,9 @@
 			);
 			mainGroup = EC12FC542E01173F00A19FF0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EC3179E22E059A6C00DDB6DA /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EC12FC5E2E01173F00A19FF0 /* Products */;
 			projectDirPath = "";
@@ -400,6 +428,7 @@
 				DEVELOPMENT_TEAM = 3DW4U98M3X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PageOne/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -430,6 +459,7 @@
 				DEVELOPMENT_TEAM = 3DW4U98M3X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PageOne/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -562,6 +592,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		EC3179E22E059A6C00DDB6DA /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = 18.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EC3179E32E059A6C00DDB6DA /* FacebookAEM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EC3179E22E059A6C00DDB6DA /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookAEM;
+		};
+		EC3179E52E059A6C00DDB6DA /* FacebookBasics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EC3179E22E059A6C00DDB6DA /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookBasics;
+		};
+		EC3179E72E059A6C00DDB6DA /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EC3179E22E059A6C00DDB6DA /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = EC12FC552E01173F00A19FF0 /* Project object */;
 }

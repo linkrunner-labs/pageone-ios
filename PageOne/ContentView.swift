@@ -96,6 +96,10 @@ struct ContentView: View {
             try viewContext.save()
             print("New note saved successfully: \(newNote.title ?? "No title")")
             
+            // Track SKAN conversion for note creation
+            let isFirstNote = notes.isEmpty
+            SKANManager.shared.trackNoteCreated(isFirstNote: isFirstNote)
+            
             // Immediately set the new note as selected with animation
             withAnimation(.easeInOut(duration: 0.3)) {
                 selectedNote = newNote
@@ -259,6 +263,10 @@ private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
             try viewContext.save()
             print("New note saved successfully: \(newNote.title ?? "No title")")
             
+            // Track SKAN conversion for note creation
+            let isFirstNote = notes.isEmpty
+            SKANManager.shared.trackNoteCreated(isFirstNote: isFirstNote)
+            
             // Set the new note as selected
             selectedNote.wrappedValue = newNote
             print("Selected note set to: \(newNote.title ?? "None")")
@@ -319,15 +327,8 @@ struct NoteEditView: View {
         verticalSizeClass == .compact
     }
     
-    private var bottomContentMargin: CGFloat {
-        // Calculate the total height needed for floating buttons:
-        // Button height (52) + bottom padding + some extra buffer
-        let buttonHeight: CGFloat = 52
-        let buttonBottomPadding = isLandscape ? DesignSystem.Spacing.xl / 2 : DesignSystem.Spacing.xxxxl / 2
-        let extraBuffer: CGFloat = DesignSystem.Spacing.md // Extra space for comfort
-        
-        return buttonHeight + buttonBottomPadding + extraBuffer
-    }
+    // Fixed bottom margin to prevent overlap with floating buttons
+    private let bottomContentMargin: CGFloat = 500
     
     var body: some View {
         TextEditor(text: $textContent)
@@ -339,17 +340,7 @@ struct NoteEditView: View {
             .contentMargins(.bottom, bottomContentMargin)
             .background(DesignSystem.Colors.primaryBackground)
             .scrollContentBackground(.hidden) // Hide the default white background
-            .mask(
-                LinearGradient(
-                    gradient: Gradient(stops: [
-                        .init(color: .black, location: 0),
-                        .init(color: .black, location: 0.95),
-                        .init(color: .clear, location: 1)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .onChange(of: textContent) { newValue in
                 debouncedSave(newValue)
             }
@@ -377,6 +368,11 @@ struct NoteEditView: View {
             do {
                 try viewContext.save()
                 print("Note auto-saved: \(note.title ?? "No title")")
+                
+                // Track SKAN conversion for note editing (only if there's actual content)
+                if !newText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    SKANManager.shared.trackNoteEdited()
+                }
             } catch {
                 print("Error saving note: \(error)")
             }
