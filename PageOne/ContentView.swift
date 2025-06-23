@@ -14,6 +14,7 @@ struct ContentView: View {
     
     @State private var selectedNote: NoteEntity?
     @State private var bottomSheetDelegate: ContentViewBottomSheetDelegate?
+    @State private var shouldAutoFocusKeyboard: Bool = true
     
     // Computed properties for responsive design
     private var isLandscape: Bool {
@@ -33,7 +34,7 @@ struct ContentView: View {
             // Main content area
             Group {
                 if let note = selectedNote {
-                    NoteEditView(note: note)
+                    NoteEditView(note: note, shouldAutoFocusKeyboard: shouldAutoFocusKeyboard)
                         .id(note.id)
                 } else {
                     EmptyStateView()
@@ -70,6 +71,7 @@ struct ContentView: View {
         .onAppear {
             // Auto-select first note or create one
             if let firstNote = notes.first {
+                shouldAutoFocusKeyboard = true
                 selectedNote = firstNote
                 print("Auto-selected first note: \(firstNote.title ?? "No title")")
             } else {
@@ -99,6 +101,9 @@ struct ContentView: View {
             // Track SKAN conversion for note creation
             let isFirstNote = notes.isEmpty
             SKANManager.shared.trackNoteCreated(isFirstNote: isFirstNote)
+            
+            // Enable keyboard auto-focus for new notes
+            shouldAutoFocusKeyboard = true
             
             // Immediately set the new note as selected with animation
             withAnimation(.easeInOut(duration: 0.3)) {
@@ -157,7 +162,13 @@ struct ContentView: View {
                 }
             ),
             viewContext: viewContext,
-            notes: notes
+            notes: notes,
+            shouldAutoFocusKeyboard: Binding(
+                get: { shouldAutoFocusKeyboard },
+                set: { newValue in
+                    shouldAutoFocusKeyboard = newValue
+                }
+            )
         )
         bottomSheetDelegate = delegate  // Store reference to prevent deallocation
         bottomSheet.delegate = delegate
@@ -174,6 +185,9 @@ struct ContentView: View {
         
         // If the deleted note is currently selected, select another note or clear selection
         if selectedNote == note {
+            // Don't auto-focus keyboard when switching due to deletion
+            shouldAutoFocusKeyboard = false
+            
             // Find another note to select (prefer the next one, or the previous one, or nil)
             if let currentIndex = notes.firstIndex(of: note) {
                 if currentIndex + 1 < notes.count {
@@ -214,20 +228,25 @@ private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
     private let selectedNote: Binding<NoteEntity?>
     private let viewContext: NSManagedObjectContext
     private let notes: FetchedResults<NoteEntity>
+    private let shouldAutoFocusKeyboard: Binding<Bool>
     
     init(
         selectedNote: Binding<NoteEntity?>,
         viewContext: NSManagedObjectContext,
-        notes: FetchedResults<NoteEntity>
+        notes: FetchedResults<NoteEntity>,
+        shouldAutoFocusKeyboard: Binding<Bool>
     ) {
         self.selectedNote = selectedNote
         self.viewContext = viewContext
         self.notes = notes
+        self.shouldAutoFocusKeyboard = shouldAutoFocusKeyboard
     }
     
     func bottomSheetDidSelectNote(_ note: NoteEntity) {
         print("Bottom sheet note selected: \(note.title ?? "No title") with ID: \(note.id?.uuidString ?? "no ID")")
         print("Current selectedNote: \(selectedNote.wrappedValue?.title ?? "nil") with ID: \(selectedNote.wrappedValue?.id?.uuidString ?? "no ID")")
+        // User manually selected a note, so enable keyboard auto-focus
+        shouldAutoFocusKeyboard.wrappedValue = true
         selectedNote.wrappedValue = note
         print("After setting, selectedNote: \(selectedNote.wrappedValue?.title ?? "nil") with ID: \(selectedNote.wrappedValue?.id?.uuidString ?? "no ID")")
     }
@@ -267,6 +286,9 @@ private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
             let isFirstNote = notes.isEmpty
             SKANManager.shared.trackNoteCreated(isFirstNote: isFirstNote)
             
+            // Enable keyboard auto-focus for new notes
+            shouldAutoFocusKeyboard.wrappedValue = true
+            
             // Set the new note as selected
             selectedNote.wrappedValue = newNote
             print("Selected note set to: \(newNote.title ?? "None")")
@@ -279,6 +301,9 @@ private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
     private func deleteNote(_ note: NoteEntity) {
         // If the deleted note is currently selected, select another note or clear selection
         if selectedNote.wrappedValue == note {
+            // Don't auto-focus keyboard when switching due to deletion
+            shouldAutoFocusKeyboard.wrappedValue = false
+            
             // Find another note to select (prefer the next one, or the previous one, or nil)
             if let currentIndex = notes.firstIndex(of: note) {
                 if currentIndex + 1 < notes.count {
@@ -316,6 +341,7 @@ private class ContentViewBottomSheetDelegate: NSObject, BottomSheetDelegate {
 
 struct NoteEditView: View {
     @ObservedObject var note: NoteEntity
+    let shouldAutoFocusKeyboard: Bool
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var textContent: String = ""
@@ -348,9 +374,11 @@ struct NoteEditView: View {
                 textContent = note.body ?? ""
                 print("NoteEditView appeared with note: \(note.title ?? "No title") with ID: \(note.id?.uuidString ?? "no ID")")
                 print("Setting textContent to: \(textContent)")
-                // Auto-focus keyboard on launch
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isTextFieldFocused = true
+                // Auto-focus keyboard only when explicitly requested (not after deletion)
+                if shouldAutoFocusKeyboard {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isTextFieldFocused = true
+                    }
                 }
             }
             .navigationBarHidden(true)

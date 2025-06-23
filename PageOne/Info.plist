@@ -17,13 +17,6 @@
 	<string>1e9ccbea0b459885fcb8a6a8b90ab877</string>
 	<key>FacebookDisplayName</key>
 	<string>PageOne</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>fbapi</string>
-		<string>fb-messenger-api</string>
-		<string>fbauth2</string>
-		<string>fbshareextension</string>
-	</array>
     <key>SKAdNetworkItems</key>
     <array>
         <dict>
