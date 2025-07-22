@@ -68,7 +68,7 @@ class SKANManager {
                     // Create PostbackUpdate with fine conversion value (iOS 18.0+)
                     let postbackUpdate = PostbackUpdate(
                         fineConversionValue: value.rawValue,
-                        lockPostback: false,
+                        lockPostback: true,
                         coarseConversionValue: nil,
                         conversionTypes: nil
                     )
@@ -89,7 +89,7 @@ class SKANManager {
                     
                     let postbackUpdate = PostbackUpdate(
                         fineConversionValue: value.rawValue,
-                        lockPostback: false,
+                        lockPostback: true,
                         coarseConversionValue: nil,
                         conversionTypes: nil
                     )
@@ -108,7 +108,7 @@ class SKANManager {
             //     SKAdNetwork.updatePostbackConversionValue(
             //         value.rawValue,
             //         coarseValue: value.coarseValue,
-            //         lockWindow: false
+            //         lockWindow: true
             //     ) { error in
             //         if let error = error {
             //             print("❌ SKAN conversion update failed for \(action): \(error)")
@@ -137,7 +137,7 @@ class SKANManager {
                     // Create PostbackUpdate with custom fine conversion value (iOS 18.0+)
                     let postbackUpdate = PostbackUpdate(
                         fineConversionValue: value,
-                        lockPostback: false,
+                        lockPostback: true,
                         coarseConversionValue: nil,
                         conversionTypes: nil
                     )
@@ -150,7 +150,7 @@ class SKANManager {
                 }
             }
         } else if #available(iOS 18.0, *) {
-            // Fallback for iOS 17.4-17.9 - use older AdAttributionKit API
+            // Fallback for iOS 17.4-17.9 - use older AdAttributionKit API 
             Task {
                 do {
                     // Ensure impression is created first
@@ -158,7 +158,7 @@ class SKANManager {
 
                     let postbackUpdate = PostbackUpdate(
                         fineConversionValue: value,
-                        lockPostback: false,
+                        lockPostback: true,
                         coarseConversionValue: nil,
                         conversionTypes: nil
                     )
@@ -177,7 +177,7 @@ class SKANManager {
             //     SKAdNetwork.updatePostbackConversionValue(
             //         value,
             //         coarseValue: coarseValue,
-            //         lockWindow: false
+            //         lockWindow: true
             //     ) { error in
             //         if let error = error {
             //             print("❌ Custom SKAN conversion update failed for \(action): \(error)")
