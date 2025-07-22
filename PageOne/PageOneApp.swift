@@ -13,6 +13,9 @@ struct PageOneApp: App {
             UIApplication.shared,
             didFinishLaunchingWithOptions: nil
         )
+        
+        // Create development impression for testing postbacks
+        SKANManager.shared.createDevelopmentImpression()
     }
     
     var body: some Scene {
