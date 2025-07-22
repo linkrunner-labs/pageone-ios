@@ -251,7 +251,7 @@ class SKANManager {
     //         // Create impression with source App Store identifier = 0 for development
     //         let impression = SKAdImpression(
     //             sourceAppStoreItemIdentifier: 0,  // This makes it a development impression
-    //             advertisedAppStoreItemIdentifier: 6448311069, // Your app's App Store ID
+    //             advertisedAppStoreItemIdentifier: 6747420629, // Your app's App Store ID
     //             adNetworkIdentifier: "example.skadnetwork", // Use a test network ID
     //             adCampaignIdentifier: 739874,
     //             adImpressionIdentifier: UUID().uuidString,
@@ -289,7 +289,7 @@ class SKANManager {
     // Commented out StoreKit test impression - migrated to AdAttributionKit
     // /// Alternative method to create impression for testing different scenarios
     // @available(iOS 14.6, *)
-    // func createTestImpression(appStoreId: NSNumber = 6448311069) {
+    // func createTestImpression(appStoreId: NSNumber = 6747420629) {
     //     let impression = SKAdImpression(
     //         sourceAppStoreItemIdentifier: 0,  // Development impression
     //         advertisedAppStoreItemIdentifier: appStoreId,
@@ -403,7 +403,7 @@ class SKANManager {
         
         // JWS Payload for development impression (matching working example format)
         let payload = [
-            "advertised-item-identifier": 6448311069,  // Your app's App Store ID
+            "advertised-item-identifier": 6747420629,  // Your app's App Store ID
             "ad-network-identifier": "development.adattributionkit",
             "impression-type": "app-impression",
             "timestamp": Int(Date().timeIntervalSince1970 * 1000),
@@ -460,7 +460,7 @@ class SKANManager {
     
     /// Alternative method to create AdAttributionKit impression for testing
     @available(iOS 17.4, *)
-    func createTestAdAttributionImpression(appStoreId: Int = 6448311069) async {
+    func createTestAdAttributionImpression(appStoreId: Int = 6747420629) async {
         print("🧪 Starting test impression creation for App Store ID: \(appStoreId)")
         
         do {
@@ -516,12 +516,12 @@ class SKANManager {
     @available(iOS 17.4, *)
     private func generateTestJWSPayload(appStoreId: Int) -> String {
         let header = [
-            "kid": "example.adattributionkit",
+            "kid": "apple-development-identifier/1",
             "alg": "ES256"
         ]
         
         let payload = [
-            "advertised-item-identifier": 6448311069,  // Your app's App Store ID
+            "advertised-item-identifier": 6747420629,  // Your app's App Store ID
             "ad-network-identifier": "development.adattributionkit",
             "impression-type": "app-impression",
             "timestamp": Int(Date().timeIntervalSince1970 * 1000),
