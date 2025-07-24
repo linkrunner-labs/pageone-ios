@@ -1,6 +1,6 @@
 import Foundation
-// import StoreKit  // Commented out - migrating to AdAttributionKit
-import AdAttributionKit
+import StoreKit
+// import AdAttributionKit  // Commented out - migrating back to StoreKit
 
 /// Centralized manager for SKAdNetwork (SKAN) conversion tracking
 class SKANManager {
@@ -24,17 +24,16 @@ class SKANManager {
         case multipleNotesCreated = 4
         case activeUser = 5  // User who creates 5+ notes
         
-        // Commented out - SKAdNetwork.CoarseConversionValue not used in AdAttributionKit
-        // var coarseValue: SKAdNetwork.CoarseConversionValue {
-        //     switch self {
-        //     case .noteCreated, .noteEdited:
-        //         return .low
-        //     case .firstNoteCreated, .multipleNotesCreated:
-        //         return .medium
-        //     case .activeUser:
-        //         return .high
-        //     }
-        // }
+        var coarseValue: SKAdNetwork.CoarseConversionValue {
+            switch self {
+            case .noteCreated, .noteEdited:
+                return .low
+            case .firstNoteCreated, .multipleNotesCreated:
+                return .medium
+            case .activeUser:
+                return .high
+            }
+        }
     }
     
     /// Tracks SKAN conversion for note creation
@@ -53,342 +52,298 @@ class SKANManager {
         trackConversion(value: .activeUser, action: "active_user")
     }
     
-    /// Generic method to track SKAN conversion values using AdAttributionKit
-    /// Ensures impression is created first before tracking conversions
+    /// Generic method to track SKAN conversion values using StoreKit
     private func trackConversion(value: ConversionValue, action: String) {
-        print("🎯 Tracking AdAttributionKit conversion - Action: \(action), Value: \(value.rawValue)")
+        print("🎯 Tracking SKAN conversion - Action: \(action), Value: \(value.rawValue)")
         
-        // Use AdAttributionKit
-        if #available(iOS 18.0, *) {
-            Task {
-                do {
-                    // Ensure impression is created first
-                    try await ensureImpressionCreated()
-                    
-                    // Create PostbackUpdate with fine conversion value (iOS 18.0+)
-                    let postbackUpdate = PostbackUpdate(
-                        fineConversionValue: value.rawValue,
-                        lockPostback: true,
-                        coarseConversionValue: nil,
-                        conversionTypes: nil
-                    )
-                    
-                    // Now track the conversion
-                    try await Postback.updateConversionValue(postbackUpdate)
-                    print("✅ AdAttributionKit conversion successfully updated for \(action) with value \(value.rawValue)")
-                } catch {
-                    print("❌ AdAttributionKit conversion update failed for \(action): \(error)")
+        // Use StoreKit SKAdNetwork
+        if #available(iOS 16.1, *) {
+            SKAdNetwork.updatePostbackConversionValue(
+                value.rawValue,
+                coarseValue: value.coarseValue,
+                lockWindow: true
+            ) { error in
+                if let error = error {
+                    print("❌ SKAN conversion update failed for \(action): \(error)")
+                } else {
+                    print("✅ SKAN conversion successfully updated for \(action) with value \(value.rawValue)")
                 }
             }
-        } else if #available(iOS 18.0, *) {
-            // Fallback for iOS 17.4-17.9 - use older AdAttributionKit API
-            Task {
-                do {
-                    // Ensure impression is created first
-                    try await ensureImpressionCreated()
-                    
-                    let postbackUpdate = PostbackUpdate(
-                        fineConversionValue: value.rawValue,
-                        lockPostback: true,
-                        coarseConversionValue: nil,
-                        conversionTypes: nil
-                    )
-                    
-                    // Use older updateConversionValue API for iOS 17.4-17.9
-                    try await Postback.updateConversionValue(postbackUpdate)
-                    print("✅ AdAttributionKit conversion (legacy) successfully updated for \(action) with value \(value.rawValue)")
-                } catch {
-                    print("❌ AdAttributionKit conversion (legacy) update failed for \(action): \(error)")
-                }
-            }
-        } else {
-            print("⚠️ AdAttributionKit not available on this iOS version (requires iOS 17.4+)")
-            // Fallback to legacy StoreKit implementation
-            // if #available(iOS 16.1, *) {
-            //     SKAdNetwork.updatePostbackConversionValue(
-            //         value.rawValue,
-            //         coarseValue: value.coarseValue,
-            //         lockWindow: true
-            //     ) { error in
-            //         if let error = error {
-            //             print("❌ SKAN conversion update failed for \(action): \(error)")
-            //         } else {
-            //             print("✅ SKAN conversion successfully updated for \(action) with value \(value.rawValue)")
-            //         }
-            //     }
-            // } else if #available(iOS 14.0, *) {
-            //     SKAdNetwork.updateConversionValue(value.rawValue)
-            //     print("✅ SKAN conversion value updated (legacy API) for \(action) with value \(value.rawValue)")
-            // }
+        } else if #available(iOS 14.0, *) {
+            SKAdNetwork.updateConversionValue(value.rawValue)
+            print("✅ SKAN conversion value updated (legacy API) for \(action) with value \(value.rawValue)")
         }
+        
+        // Commented out AdAttributionKit implementation
+        // if #available(iOS 18.0, *) {
+        //     Task {
+        //         do {
+        //             // Ensure impression is created first
+        //             try await ensureImpressionCreated()
+        //             
+        //             // Create PostbackUpdate with fine conversion value (iOS 18.0+)
+        //             let postbackUpdate = PostbackUpdate(
+        //                 fineConversionValue: value.rawValue,
+        //                 lockPostback: true,
+        //                 coarseConversionValue: value.coarseValue,
+        //                 conversionTypes: [.install]
+        //             )
+        //             
+        //             // Now track the conversion
+        //             try await Postback.updateConversionValue(postbackUpdate)
+        //             print("✅ AdAttributionKit conversion successfully updated for \(action) with value \(value.rawValue)")
+        //         } catch {
+        //             print("❌ AdAttributionKit conversion update failed for \(action): \(error)")
+        //         }
+        //     }
+        // }
     }
     
-    /// Tracks conversion with custom value (for special cases) using AdAttributionKit
-    /// Ensures impression is created first before tracking conversions
+    /// Tracks conversion with custom value (for special cases) using StoreKit
     func trackCustomConversion(value: Int, action: String) {
-        print("🎯 Tracking custom AdAttributionKit conversion - Action: \(action), Value: \(value)")
+        print("🎯 Tracking custom SKAN conversion - Action: \(action), Value: \(value)")
         
-        if #available(iOS 18.0, *) {
-            Task {
-                do {
-                    // Ensure impression is created first
-                    try await ensureImpressionCreated()
-                    
-                    // Create PostbackUpdate with custom fine conversion value (iOS 18.0+)
-                    let postbackUpdate = PostbackUpdate(
-                        fineConversionValue: value,
-                        lockPostback: true,
-                        coarseConversionValue: nil,
-                        conversionTypes: nil
-                    )
-                    
-                    // Now track the custom conversion
-                    try await Postback.updateConversionValue(postbackUpdate)
-                    print("✅ Custom AdAttributionKit conversion successfully updated for \(action) with value \(value)")
-                } catch {
-                    print("❌ Custom AdAttributionKit conversion update failed for \(action): \(error)")
+        // Use StoreKit SKAdNetwork
+        if #available(iOS 16.1, *) {
+            SKAdNetwork.updatePostbackConversionValue(
+                value,
+                coarseValue: .medium,  // Default to medium for custom conversions
+                lockWindow: true
+            ) { error in
+                if let error = error {
+                    print("❌ Custom SKAN conversion update failed for \(action): \(error)")
+                } else {
+                    print("✅ Custom SKAN conversion successfully updated for \(action) with value \(value)")
                 }
             }
-        } else if #available(iOS 18.0, *) {
-            // Fallback for iOS 17.4-17.9 - use older AdAttributionKit API 
-            Task {
-                do {
-                    // Ensure impression is created first
-                    try await ensureImpressionCreated()
-
-                    let postbackUpdate = PostbackUpdate(
-                        fineConversionValue: value,
-                        lockPostback: true,
-                        coarseConversionValue: nil,
-                        conversionTypes: nil
-                    )
-                    
-                    // Use older updateConversionValue API for iOS 17.4-17.9
-                    try await Postback.updateConversionValue(postbackUpdate)
-                    print("✅ Custom AdAttributionKit conversion (legacy) successfully updated for \(action) with value \(value)")
-                } catch {
-                    print("❌ Custom AdAttributionKit conversion (legacy) update failed for \(action): \(error)")
-                }
-            }
-        } else {
-            print("⚠️ AdAttributionKit not available on this iOS version (requires iOS 17.4+)")
-            // Fallback to legacy StoreKit implementation
-            // if #available(iOS 16.1, *) {
-            //     SKAdNetwork.updatePostbackConversionValue(
-            //         value,
-            //         coarseValue: coarseValue,
-            //         lockWindow: true
-            //     ) { error in
-            //         if let error = error {
-            //             print("❌ Custom SKAN conversion update failed for \(action): \(error)")
-            //         } else {
-            //             print("✅ Custom SKAN conversion successfully updated for \(action) with value \(value)")
-            //         }
-            //     }
-            // } else if #available(iOS 14.0, *) {
-            //     SKAdNetwork.updateConversionValue(value)
-            //     print("✅ Custom SKAN conversion value updated (legacy API) for \(action) with value \(value)")
-            // }
-        }
-    }
-    
-    /// Ensure impression is created before tracking conversions
-    @available(iOS 17.4, *)
-    private func ensureImpressionCreated() async throws {
-        guard !impressionCreated else {
-            print("ℹ️ Impression already created, proceeding with conversion tracking")
-            return
+        } else if #available(iOS 14.0, *) {
+            SKAdNetwork.updateConversionValue(value)
+            print("✅ Custom SKAN conversion value updated (legacy API) for \(action) with value \(value)")
         }
         
-        // If impression task is already running, wait for it to complete
-        if let existingTask = impressionTask {
-            print("⏳ Waiting for existing impression creation to complete...")
-            do {
-                try await existingTask.value
-                return
-            } catch {
-                print("❌ Existing impression task failed: \(error)")
-                // Continue to try creating a new impression
-            }
-        }
-        
-        // Create new impression
-        print("🎯 Creating impression before conversion tracking...")
-        impressionTask = Task {
-            try await createAdAttributionKitDevelopmentImpression()
-        }
-        
-        try await impressionTask!.value
+        // Commented out AdAttributionKit implementation
+        // if #available(iOS 18.0, *) {
+        //     Task {
+        //         do {
+        //             // Ensure impression is created first
+        //             try await ensureImpressionCreated()
+        //             
+        //             // Create PostbackUpdate with custom fine conversion value (iOS 18.0+)
+        //             let postbackUpdate = PostbackUpdate(
+        //                 fineConversionValue: value,
+        //                 lockPostback: true,
+        //                 coarseConversionValue: .medium,
+        //                 conversionTypes: [.install]
+        //             )
+        //             
+        //             // Now track the custom conversion
+        //             try await Postback.updateConversionValue(postbackUpdate)
+        //             print("✅ Custom AdAttributionKit conversion successfully updated for \(action) with value \(value)")
+        //         } catch {
+        //             print("❌ Custom AdAttributionKit conversion update failed for \(action): \(error)")
+        //         }
+        //     }
+        // }
     }
     
-    /// Create a development impression using AdAttributionKit
-    func createDevelopmentImpression() {
-        if #available(iOS 17.4, *) {
-            impressionTask = Task {
-                try await createAdAttributionKitDevelopmentImpression()
-            }
-        } else {
-            print("⚠️ AdAttributionKit not available on this iOS version (requires iOS 17.4+)")
-            // Fallback to StoreKit implementation if needed
-            // if #available(iOS 14.6, *) {
-            //     Task {
-            //         await createStoreKitDevelopmentImpression()
-            //     }
-            // }
-        }
-    }
-    
-    // Commented out StoreKit implementation - migrated to AdAttributionKit
-    // /// Internal method to create StoreKit development impression
-    // @available(iOS 14.6, *)
-    // private func createStoreKitDevelopmentImpression() async {
+    // Commented out AdAttributionKit impression management
+    // /// Ensure impression is created before tracking conversions
+    // @available(iOS 17.4, *)
+    // private func ensureImpressionCreated() async throws {
     //     guard !impressionCreated else {
-    //         print("Development impression already created")
+    //         print("ℹ️ Impression already created, proceeding with conversion tracking")
     //         return
     //     }
     //     
-    //     do {
-    //         // Create impression with source App Store identifier = 0 for development
-    //         let impression = SKAdImpression(
-    //             sourceAppStoreItemIdentifier: 0,  // This makes it a development impression
-    //             advertisedAppStoreItemIdentifier: 6747420629, // Your app's App Store ID
-    //             adNetworkIdentifier: "example.skadnetwork", // Use a test network ID
-    //             adCampaignIdentifier: 739874,
-    //             adImpressionIdentifier: UUID().uuidString,
-    //             timestamp: 974958093749,
-    //             signature: "test-signature",
-    //             version: "2.2"
-    //         )
-    //         
-    //         SKAdNetwork.startImpression(impression) { error in
-    //             if let error = error {
-    //                 print("❌ Error starting StoreKit impression: \(error)")
-    //                 if let nsError = error as NSError? {
-    //                     print("Error details:")
-    //                     print("- Domain: \(nsError.domain)")
-    //                     print("- Code: \(nsError.code)")
-    //                     print("- Description: \(nsError.localizedDescription)")
-    //                     print("- UserInfo: \(nsError.userInfo)")
-    //                 }
-    //             } else {
-    //                 print("✅ StoreKit development impression started successfully")
-    //                 self.impressionCreated = true
-    //                 
-    //                 // Send test conversion value after 2 seconds
-    //                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-    //                     print("⏰ Sending test conversion value 2 seconds after impression...")
-    //                     self.trackNoteCreated(isFirstNote: true)
-    //                 }
-    //             }
+    //     // If impression task is already running, wait for it to complete
+    //     if let existingTask = impressionTask {
+    //         print("⏳ Waiting for existing impression creation to complete...")
+    //         do {
+    //             try await existingTask.value
+    //             return
+    //         } catch {
+    //             print("❌ Existing impression task failed: \(error)")
+    //             // Continue to try creating a new impression
     //         }
-    //     } catch {
-    //         print("❌ Failed to create StoreKit impression: \(error)")
     //     }
-    // }
-    
-    // Commented out StoreKit test impression - migrated to AdAttributionKit
-    // /// Alternative method to create impression for testing different scenarios
-    // @available(iOS 14.6, *)
-    // func createTestImpression(appStoreId: NSNumber = 6747420629) {
-    //     let impression = SKAdImpression(
-    //         sourceAppStoreItemIdentifier: 0,  // Development impression
-    //         advertisedAppStoreItemIdentifier: appStoreId,
-    //         adNetworkIdentifier: "example.skadnetwork",
-    //         adCampaignIdentifier: 739874,
-    //         adImpressionIdentifier: UUID().uuidString,
-    //         timestamp: 879866564576,
-    //         signature: "test-signature",
-    //         version: "2.2"
-    //     )
     //     
-    //     SKAdNetwork.startImpression(impression) { error in
-    //         if let error = error {
-    //             print("❌ Test impression failed: \(error)")
-    //         } else {
-    //             print("✅ Test impression created for App Store ID: \(appStoreId)")
-    //         }
+    //     // Create new impression
+    //     print("🎯 Creating impression before conversion tracking...")
+    //     impressionTask = Task {
+    //         try await createAdAttributionKitDevelopmentImpression()
     //     }
+    //     
+    //     try await impressionTask!.value
     // }
     
-    /// Internal method to create AdAttributionKit development impression with JWS
-    @available(iOS 17.4, *)
-    private func createAdAttributionKitDevelopmentImpression() async throws {
+    /// Create a development impression using StoreKit
+    func createDevelopmentImpression() {
+        if #available(iOS 14.6, *) {
+            Task {
+                await createStoreKitDevelopmentImpression()
+            }
+        } else {
+            print("⚠️ StoreKit impression creation not available on this iOS version (requires iOS 14.6+)")
+        }
+        
+        // Commented out AdAttributionKit implementation
+        // if #available(iOS 17.4, *) {
+        //     impressionTask = Task {
+        //         try await createAdAttributionKitDevelopmentImpression()
+        //     }
+        // }
+    }
+    
+    /// Internal method to create StoreKit development impression
+    @available(iOS 14.6, *)
+    private func createStoreKitDevelopmentImpression() async {
         guard !impressionCreated else {
             print("Development impression already created")
             return
         }
         
-        // Generate JWS payload for development impression
-        print("🔐 Generating JWS payload for development impression...")
-        let jwsPayload = generateDevelopmentJWSPayload()
-        
-        if jwsPayload.isEmpty {
-            let error = NSError(domain: "JWSError", code: -1, userInfo: [NSLocalizedDescriptionKey: "JWS payload generation failed"])
-            print("❌ JWS payload generation failed")
-            throw error
-        }
-        
-        print("✅ JWS payload generated successfully (\(jwsPayload.count) characters)")
-        
-        // Create AppImpression with the JWS
-        print("📱 Creating AppImpression with JWS...")
-        let impression: AppImpression
         do {
-            impression = try await AppImpression(compactJWS: jwsPayload)
-            print("✅ AppImpression created successfully")
-        } catch {
-            print("❌ Failed to create AppImpression: \(error)")
-            if let nsError = error as NSError? {
-                print("📋 AppImpression Error Details:")
-                print("   - Domain: \(nsError.domain)")
-                print("   - Code: \(nsError.code)")
-                print("   - Description: \(nsError.localizedDescription)")
-                print("   - UserInfo: \(nsError.userInfo)")
-            }
-            print("🔧 Debug: JWS that failed AppImpression creation:")
-            print("   JWS: \(jwsPayload.prefix(200))...")
-            throw error
-        }
-        
-        // Start the impression
-        print("🚀 Starting AdAttributionKit impression...")
-        do {
-//            try await impression.startImpression()
-            print("✅ AdAttributionKit development impression started successfully")
-            impressionCreated = true
+            // Create impression with source App Store identifier = 0 for development
+            let impression = SKAdImpression(
+                sourceAppStoreItemIdentifier: 0,  // This makes it a development impression
+                advertisedAppStoreItemIdentifier: 6747420629, // Your app's App Store ID
+                adNetworkIdentifier: "example.skadnetwork", // Use a test network ID
+                adCampaignIdentifier: 739874,
+                adImpressionIdentifier: UUID().uuidString,
+                timestamp: 974958093749,
+                signature: "test-signature",
+                version: "2.2"
+            )
             
-            // Send test conversion value after 2 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                print("⏰ Sending test conversion value 2 seconds after impression...")
-                self.trackNoteCreated(isFirstNote: true)
-            }
-            
-        } catch {
-            print("❌ Failed to start AdAttributionKit impression: \(error)")
-            if let nsError = error as NSError? {
-                print("📋 Start Impression Error Details:")
-                print("   - Domain: \(nsError.domain)")
-                print("   - Code: \(nsError.code)")
-                print("   - Description: \(nsError.localizedDescription)")
-                print("   - UserInfo: \(nsError.userInfo)")
-                print("   - Recovery Suggestion: \(nsError.localizedRecoverySuggestion ?? "None")")
-                print("   - Failure Reason: \(nsError.localizedFailureReason ?? "Unknown")")
-                
-                // Check for specific error codes
-                switch nsError.code {
-                case -1:
-                    print("🔍 Possible invalid JWS signature")
-                case -2:
-                    print("🔍 Possible network connectivity issue")
-                case -3:
-                    print("🔍 Possible AdAttributionKit configuration error")
-                default:
-                    print("🔍 Unrecognized error code: \(nsError.code)")
+            SKAdNetwork.startImpression(impression) { error in
+                if let error = error {
+                    print("❌ Error starting StoreKit impression: \(error)")
+                    if let nsError = error as NSError? {
+                        print("Error details:")
+                        print("- Domain: \(nsError.domain)")
+                        print("- Code: \(nsError.code)")
+                        print("- Description: \(nsError.localizedDescription)")
+                        print("- UserInfo: \(nsError.userInfo)")
+                    }
+                } else {
+                    print("✅ StoreKit development impression started successfully")
+                    self.impressionCreated = true
+                    
+                    // Send first conversion value after 1 minute
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) {
+                        print("⏰ Sending first conversion value 1 minute after impression...")
+                        self.trackNoteCreated(isFirstNote: true)
+                    }
                 }
             }
-            throw error
+        } catch {
+            print("❌ Failed to create StoreKit impression: \(error)")
         }
     }
+    
+    /// Alternative method to create impression for testing different scenarios
+    @available(iOS 14.6, *)
+    func createTestImpression(appStoreId: NSNumber = 6747420629) {
+        let impression = SKAdImpression(
+            sourceAppStoreItemIdentifier: 0,  // Development impression
+            advertisedAppStoreItemIdentifier: appStoreId,
+            adNetworkIdentifier: "development.skadnetwork",
+            adCampaignIdentifier: 739874,
+            adImpressionIdentifier: UUID().uuidString,
+            timestamp: 879866564576,
+            signature: "test-signature",
+            version: "2.2"
+        )
+        
+        SKAdNetwork.startImpression(impression) { error in
+            if let error = error {
+                print("❌ Test impression failed: \(error)")
+            } else {
+                print("✅ Test impression created for App Store ID: \(appStoreId)")
+            }
+        }
+    }
+    
+    // Commented out AdAttributionKit implementation
+    // /// Internal method to create AdAttributionKit development impression with JWS
+    // @available(iOS 17.4, *)
+    // private func createAdAttributionKitDevelopmentImpression() async throws {
+    //     guard !impressionCreated else {
+    //         print("Development impression already created")
+    //         return
+    //     }
+    //     
+    //     // Generate JWS payload for development impression
+    //     print("🔐 Generating JWS payload for development impression...")
+    //     let jwsPayload = generateDevelopmentJWSPayload()
+    //     
+    //     if jwsPayload.isEmpty {
+    //         let error = NSError(domain: "JWSError", code: -1, userInfo: [NSLocalizedDescriptionKey: "JWS payload generation failed"])
+    //         print("❌ JWS payload generation failed")
+    //         throw error
+    //     }
+    //     
+    //     print("✅ JWS payload generated successfully (\(jwsPayload.count) characters)")
+    //     
+    //     // Create AppImpression with the JWS
+    //     print("📱 Creating AppImpression with JWS...")
+    //     let impression: AppImpression
+    //     do {
+    //         impression = try await AppImpression(compactJWS: jwsPayload)
+    //         print("✅ AppImpression created successfully")
+    //     } catch {
+    //         print("❌ Failed to create AppImpression: \(error)")
+    //         if let nsError = error as NSError? {
+    //             print("📋 AppImpression Error Details:")
+    //             print("   - Domain: \(nsError.domain)")
+    //             print("   - Code: \(nsError.code)")
+    //             print("   - Description: \(nsError.localizedDescription)")
+    //             print("   - UserInfo: \(nsError.userInfo)")
+    //         }
+    //         print("🔧 Debug: JWS that failed AppImpression creation:")
+    //         print("   JWS: \(jwsPayload.prefix(200))...")
+    //         throw error
+    //     }
+    //     
+    //     // Start the impression
+    //     print("🚀 Starting AdAttributionKit impression...")
+    //     do {
+    // //            try await impression.startImpression()
+    //         print("✅ AdAttributionKit development impression started successfully")
+    //         impressionCreated = true
+    //         
+    //         // Send test conversion value after 2 seconds
+    //         DispatchQueue.main.asyncAfter(deadline: .now() + 30.0) {
+    //             print("⏰ Sending test conversion value 2 seconds after impression...")
+    //             self.trackNoteCreated(isFirstNote: true)
+    //         }
+    //         
+    //     } catch {
+    //         print("❌ Failed to start AdAttributionKit impression: \(error)")
+    //         if let nsError = error as NSError? {
+    //             print("📋 Start Impression Error Details:")
+    //             print("   - Domain: \(nsError.domain)")
+    //             print("   - Code: \(nsError.code)")
+    //             print("   - Description: \(nsError.localizedDescription)")
+    //             print("   - UserInfo: \(nsError.userInfo)")
+    //             print("   - Recovery Suggestion: \(nsError.localizedRecoverySuggestion ?? "None")")
+    //             print("   - Failure Reason: \(nsError.localizedFailureReason ?? "Unknown")")
+    //             
+    //             // Check for specific error codes
+    //             switch nsError.code {
+    //             case -1:
+    //                 print("🔍 Possible invalid JWS signature")
+    //             case -2:
+    //                 print("🔍 Possible network connectivity issue")
+    //             case -3:
+    //                 print("🔍 Possible AdAttributionKit configuration error")
+    //             default:
+    //                 print("🔍 Unrecognized error code: \(nsError.code)")
+    //             }
+    //         }
+    //         throw error
+    //     }
+    // }
     
     /// Generate JWS payload for development impression
     /// Sets publisher item identifier to 0 for development testing
