@@ -433,7 +433,7 @@ class SKANManager {
             // Create test impression
             print("📱 Creating test AppImpression...")
             // let payload = "eyJraWQiOiJleGFtcGxlLmFkYXR0cmlidXRpb25raXQiLCJhbGciOiJFUzI1NiJ9.eyJhZHZlcnRpc2VkLWl0ZW0taWRlbnRpZmllciI6MTEwODE4NzM5MCwiYWQtbmV0d29yay1pZGVudGlmaWVyIjoiZXhhbXBsZS5hZGF0dHJpYnV0aW9ua2l0IiwiaW1wcmVzc2lvbi10eXBlIjoiYXBwLWltcHJlc3Npb24iLCJlbGlnaWJsZS1mb3ItcmUtZW5nYWdlbWVudCI6dHJ1ZSwidGltZXN0YW1wIjoxNzE5NTk5OTU3MjM5LCJwdWJsaXNoZXItaXRlbS1pZGVudGlmaWVyIjo1ODM4NDkyLCJpbXByZXNzaW9uLWlkZW50aWZpZXIiOiI1NDRCOEZBRC0wQUQ1LTQ0MzQtOThCMi0zMjcxMTNBRjg0REIiLCJzb3VyY2UtaWRlbnRpZmllciI6NTIzOX0.zxQ_HcpB7pK6lWOms4LZ8uK3sZu_0S-bPR0My7UY4QlEAYFP-wp5eN1WuHOmNwoPD5cgazpwA3o5xq-fhfpOEQ"
-            let impression = try await AppImpression(compactJWS: jwsPayload)
+//            let impression = try await AppImpression(compactJWS: jwsPayload)
             print("✅ Test AppImpression created successfully")
             
             // Start test impression

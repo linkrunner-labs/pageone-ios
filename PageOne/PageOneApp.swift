@@ -2,6 +2,7 @@ import SwiftUI
 import FBSDKCoreKit
 import AppTrackingTransparency
 import AdSupport
+import Airbridge
 
 @main
 struct PageOneApp: App {
@@ -14,6 +15,23 @@ struct PageOneApp: App {
             didFinishLaunchingWithOptions: nil
         )
         
+        let option = AirbridgeOptionBuilder(name: "pageoneios", token: "1cef433443394715a5628829e0a2ba9f")
+                    .build()
+                Airbridge.initializeSDK(option: option)
+        
+        Airbridge.trackEvent(
+            category: "install_event",
+            semanticAttributes: [
+                AirbridgeAttribute.VALUE: 10,
+            ],
+            customAttributes: [
+                "string": "string",
+                "number": 1000,
+                "boolean": true,
+                "object": ["key": "value"],
+                "array": ["value"],
+            ]
+        )
         // Create development impression for testing postbacks
         SKANManager.shared.createDevelopmentImpression()
     }
