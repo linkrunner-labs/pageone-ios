@@ -96,10 +96,8 @@ class SKANManager {
         
         print("🎯 Tracking SKAN app install/first open")
         
-        // Mark as tracked before making the call to prevent duplicates
-        UserDefaults.standard.set(true, forKey: "SKANInstallTracked")
-        
         // Use conversion value 1 for install (following Branch SDK pattern)
+        // Flag will be set in trackInstallConversion completion handlers
         trackInstallConversion(value: 1, action: "app_install")
     }
     
@@ -127,6 +125,8 @@ class SKANManager {
                     print("❌ SKAN 4.0 install postback failed for \(action): \(error)")
                 } else {
                     print("✅ SKAN 4.0 install postback successful for \(action) with value \(value), locked: \(shouldLockWindow)")
+                    // Mark as tracked only on success
+                    UserDefaults.standard.set(true, forKey: "SKANInstallTracked")
                 }
             }
         }
@@ -137,6 +137,8 @@ class SKANManager {
                     print("❌ SKAN 3.0 install postback failed for \(action): \(error)")
                 } else {
                     print("✅ SKAN 3.0 install postback successful for \(action) with value \(value)")
+                    // Mark as tracked only on success
+                    UserDefaults.standard.set(true, forKey: "SKANInstallTracked")
                 }
             }
         }
@@ -144,6 +146,8 @@ class SKANManager {
         else if #available(iOS 14.0, *) {
             SKAdNetwork.updateConversionValue(value)
             print("✅ SKAN 2.0 install conversion value updated for \(action) with value \(value)")
+            // Mark as tracked immediately for synchronous call
+            UserDefaults.standard.set(true, forKey: "SKANInstallTracked")
         } else {
             print("⚠️ SKAN not available on this iOS version")
         }
