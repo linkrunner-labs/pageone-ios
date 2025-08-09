@@ -13,6 +13,14 @@ struct PageOneApp: App {
             UIApplication.shared,
             didFinishLaunchingWithOptions: nil
         )
+        
+        #if DEBUG
+        // Initialize SKAdTestManager for postback testing
+        if #available(iOS 16.0, *) {
+            _ = SKAdTestManager.shared
+            print("🧪 SKAdTestManager initialized for postback testing")
+        }
+        #endif
     }
     
     var body: some Scene {

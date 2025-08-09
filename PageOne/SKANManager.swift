@@ -45,6 +45,96 @@ class SKANManager {
         trackConversion(value: .activeUser, action: "active_user")
     }
     
+    /// Tracks app install/first open with conversion value 1 (called automatically on init)
+    private func trackAppInstall() {
+        // Check if we've already sent the install postback
+        let hasTrackedInstall = UserDefaults.standard.bool(forKey: "SKANInstallTracked")
+        
+        guard !hasTrackedInstall else {
+            print("ℹ️ SKAN install already tracked, skipping")
+            return
+        }
+        
+        print("🎯 Tracking SKAN app install/first open")
+        
+        // Use conversion value 1 for install (following Branch SDK pattern)
+        // Flag will be set in trackInstallConversion completion handlers
+        trackInstallConversion(value: 1, action: "app_install")
+    }
+    
+    /// Tracks install conversion with proper iOS version handling (like Branch SDK)
+    private func trackInstallConversion(value: Int, action: String) {
+        guard shouldAttemptSKANUpdate() else {
+            print("⚠️ SKAN install update skipped - outside valid window for \(action)")
+            return
+        }
+        
+        let currentWindow = calculateCurrentSKANWindow()
+        print("🎯 Tracking SKAN install conversion - Action: \(action), Value: \(value), Window: \(currentWindow)")
+        
+        // For install, lock window to secure the attribution
+        let shouldLockWindow = true
+        
+        // iOS 16.1+ - SKAN 4.0 with coarse value and lock window
+        if #available(iOS 16.1, *) {
+            SKAdNetwork.updatePostbackConversionValue(
+                value,
+                coarseValue: .low,  // Install is typically low value
+                lockWindow: shouldLockWindow
+            ) { error in
+                if let error = error {
+                    print("❌ SKAN 4.0 install postback failed for \(action): \(error)")
+                } else {
+                    print("✅ SKAN 4.0 install postback successful for \(action) with value \(value), locked: \(shouldLockWindow)")
+                    // Mark as tracked only on success
+                    UserDefaults.standard.set(true, forKey: "SKANInstallTracked")
+                    
+                    #if DEBUG
+                    // Flush test postbacks after successful install conversion
+                    if #available(iOS 16.0, *) {
+                        SKAdTestManager.shared.flushPostbacks()
+                    }
+                    #endif
+                }
+            }
+        }
+        // iOS 15.4+ - SKAN 3.0 with postback and completion handler
+        else if #available(iOS 15.4, *) {
+            SKAdNetwork.updatePostbackConversionValue(value) { error in
+                if let error = error {
+                    print("❌ SKAN 3.0 install postback failed for \(action): \(error)")
+                } else {
+                    print("✅ SKAN 3.0 install postback successful for \(action) with value \(value)")
+                    // Mark as tracked only on success
+                    UserDefaults.standard.set(true, forKey: "SKANInstallTracked")
+                    
+                    #if DEBUG
+                    // Flush test postbacks after successful install conversion
+                    if #available(iOS 16.0, *) {
+                        SKAdTestManager.shared.flushPostbacks()
+                    }
+                    #endif
+                }
+            }
+        }
+        // iOS 14.0+ - Original SKAN API (no postback, just conversion value)
+        else if #available(iOS 14.0, *) {
+            SKAdNetwork.updateConversionValue(value)
+            print("✅ SKAN 2.0 install conversion value updated for \(action) with value \(value)")
+            // Mark as tracked immediately for synchronous call
+            UserDefaults.standard.set(true, forKey: "SKANInstallTracked")
+            
+            #if DEBUG
+            // Flush test postbacks after install conversion update
+            if #available(iOS 16.0, *) {
+                SKAdTestManager.shared.flushPostbacks()
+            }
+            #endif
+        } else {
+            print("⚠️ SKAN not available on this iOS version")
+        }
+    }
+    
     /// Generic method to track SKAN conversion values
     private func trackConversion(value: ConversionValue, action: String) {
         print("🎯 Tracking SKAN conversion - Action: \(action), Value: \(value.rawValue)")
